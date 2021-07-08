@@ -532,7 +532,7 @@ onClick=\"self.close(); return false;\"><br />";
     // Check that the user has the permission to manual enrol.
     require_capability('enrol/manual:enrol', $coursecontext);
 
-    $userid = $DB->get_field('user', 'id', array($offlinequizconfig->ID_field => $scannedpage->userkey), MUST_EXIST);
+    $userinfos = offlinequiz_get_userinfos_byuserkey($scannedpage->userkey);
 
     // Get the manual enrolment plugin.
     $enrol = enrol_get_plugin('manual');
@@ -540,7 +540,7 @@ onClick=\"self.close(); return false;\"><br />";
         throw new moodle_exception('manualpluginnotinstalled', 'enrol_manual');
     }
 
-    if (!is_enrolled($coursecontext, $userid)) {
+    if (!is_enrolled($coursecontext, key($userinfos))) {
         // Now we need the correct instance of the manual enrolment plugin.
         if (!$instance = $DB->get_record('enrol', array('courseid' => $course->id, 'enrol' => 'manual'), '*', IGNORE_MISSING)) {
             if ($instanceid = $enrol->add_default_instance($course)) {
@@ -549,7 +549,7 @@ onClick=\"self.close(); return false;\"><br />";
         }
 
         if ($instance != false) {
-            $enrol->enrol_user($instance, $userid, $offlinequizconfig->oneclickrole);
+            $enrol->enrol_user($instance, key($userinfos), $offlinequizconfig->oneclickrole);
         }
     }
 
@@ -643,7 +643,7 @@ if (is_numeric($groupnumber) && $groupnumber > 0 && $groupnumber <= $offlinequiz
 // Check whether the user exists in Moodle.
 $user = null;
 $useridcount = 0;
-$userarray = $DB->get_records('user', array($offlinequizconfig->ID_field => $userkey));
+$userarray = offlinequiz_get_userinfos_byuserkey($userkey);
 
 // Multiple users with the same id are possible so we have to check if that's the case.
 foreach ($userarray as $userelement) {
@@ -724,7 +724,7 @@ if ($group && $user && property_exists($scannedpage, 'resultid') &&
         if ($show = optional_param('show', false, PARAM_BOOL)) {
             $scanner->create_warning_image(substr($origuserkey, strlen($offlinequizconfig->ID_prefix),
                     $offlinequizconfig->ID_digits),
-                    substr($user->{$offlinequizconfig->ID_field},
+                    substr(offlinequiz_get_userkey_byuserid($user->id),
                     strlen($offlinequizconfig->ID_prefix),
                     $offlinequizconfig->ID_digits),
                     $origgroupnumber,
@@ -764,10 +764,10 @@ if ($group && $user && property_exists($scannedpage, 'resultid') &&
                 echo '<p>';
                 if (offlinequiz_check_result_completed($offlinequiz, $group, $result)) {
                     echo  get_string('userimported', 'offlinequiz', fullname($user) . " (" .
-                            $user->{$offlinequizconfig->ID_field}.")"  );
+                            offlinequiz_get_userkey_byuserid($user->id).")"  );
                 } else {
                     echo  get_string('userpageimported', 'offlinequiz', fullname($user) . " (" .
-                            $user->{$offlinequizconfig->ID_field}.")");
+                            offlinequiz_get_userkey_byuserid($user->id).")");
                 }
                 echo '</p>';
                 echo '<html>';

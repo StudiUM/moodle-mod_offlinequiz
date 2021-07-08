@@ -164,7 +164,8 @@ if ($isteacher or ($options->sheetfeedback == question_display_options::VISIBLE)
     } else {
         $user = $DB->get_record('user', array('id' => $result->userid));
     }
-    $userkey = $user->{$offlinequizconfig->ID_field};
+
+    $userkey = offlinequiz_get_userkey_byuserid($user->id);
 
     $scannedpages = $DB->get_records('offlinequiz_scanned_pages', array('resultid' => $result->id), 'pagenumber ASC');
 

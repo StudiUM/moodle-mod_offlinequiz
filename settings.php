@@ -40,6 +40,22 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_configtext_user_formula('offlinequiz/useridentification',
             get_string('useridentification', 'offlinequiz'), get_string('configuseridentification', 'offlinequiz'),
             '[7]=idnumber' , PARAM_RAW, 30));
+   
+    // Student ID mappping setting.
+    $userfields = $DB->get_records('user_info_field');
+    $mappingoptions = array();
+    $mappingoptions[] = get_string('moodleuserid', 'offlinequiz');
+
+    if (isset($userfields) && is_array($userfields) && count($userfields) > 0) {
+        foreach ($userfields as $userfield) {
+            $mappingoptions[$userfield->shortname] = $userfield->name;
+        }
+    }
+
+    $settings->add(new admin_setting_configselect('offlinequiz/useridentificationcustom',
+            get_string('useridentificationcustom', 'offlinequiz'),
+            get_string('configuseridentificationcustom', 'offlinequiz'),
+            'id', $mappingoptions));
 
     // Print study code field.
     $settings->add(new admin_setting_configcheckbox('offlinequiz/printstudycodefield',

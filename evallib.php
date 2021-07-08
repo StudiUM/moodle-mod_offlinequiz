@@ -129,7 +129,7 @@ function offlinequiz_check_scanned_page($offlinequiz, offlinequiz_page_scanner $
 
     $user = null;
     if ($scannedpage->status == 'ok' || $scannedpage->status == 'suspended') {
-        if (!$userarray = $DB->get_records('user', array($offlinequizconfig->ID_field => $scannedpage->userkey))) {
+        if (!$userarray = offlinequiz_get_userinfos_byuserkey($scannedpage->userkey)) {
             $scannedpage->status = 'error';
             $scannedpage->error = 'nonexistinguser';
         } else {
@@ -203,8 +203,8 @@ function offlinequiz_check_scanned_page($offlinequiz, offlinequiz_page_scanner $
             if (!property_exists($scannedpage, 'id') || !$scannedpage->id) {
                 $otherpages = $DB->get_records('offlinequiz_scanned_pages',
                                                array('offlinequizid' => $offlinequiz->id,
-                                                     'userkey' => $user->{$offlinequizconfig->ID_field},
-                                                     'groupnumber' => $group->groupnumber, 'pagenumber' => $page));
+                                                      'userkey' => offlinequiz_get_userkey_byuserid($user->id),
+                                                      'groupnumber' => $group->groupnumber, 'pagenumber' => $page));
             } else {
                 $sql = "SELECT id
                           FROM {offlinequiz_scanned_pages}
@@ -216,7 +216,7 @@ function offlinequiz_check_scanned_page($offlinequiz, offlinequiz_page_scanner $
                            AND id <> :id";
 
                 $params = array('offlinequizid' => $offlinequiz->id,
-                                                'userkey' => $user->{$offlinequizconfig->ID_field},
+                                                'userkey' => offlinequiz_get_userkey_byuserid($user->id),
                                                 'groupnumber' => $group->groupnumber,
                                                 'pagenumber' => $page,
                                                 'id' => $scannedpage->id);
@@ -337,7 +337,7 @@ function offlinequiz_process_scanned_page($offlinequiz, offlinequiz_page_scanner
     if (property_exists($scannedpage, 'resultid') && $scannedpage->resultid) {
         $group = $DB->get_record('offlinequiz_groups',
                                  array('offlinequizid' => $offlinequiz->id, 'groupnumber' => $scannedpage->groupnumber));
-        $user = $DB->get_record('user', array($offlinequizconfig->ID_field => $scannedpage->userkey));
+        $user = offlinequiz_get_userinfos_byuserkey($scannedpage->userkey, 'object');
         $result = $DB->get_record('offlinequiz_results', array('id' => $scannedpage->resultid));
         $quba = offlinequiz_load_questions_usage_by_activity($result->usageid);
         // Retrieve the answers. This initialises the answer hotspots.
@@ -592,7 +592,7 @@ function offlinequiz_check_for_changed_user($offlinequiz, $scanner, $scannedpage
 
     if (property_exists($scannedpage, 'resultid') and $scannedpage->resultid) {
         if ($result = $DB->get_record('offlinequiz_results', array('id' => $scannedpage->resultid))) {
-            if ($newuser = $DB->get_record('user', array($offlinequizconfig->ID_field => $scannedpage->userkey))) {
+            if ($newuser = offlinequiz_get_userinfos_byuserkey($scannedpage->userkey, 'object')) {
                 if ($newuser->id != $result->userid) {
                     $oldresultid = $scannedpage->resultid;
                     // We have to disconnect the page from its result because we have to create a new result for the new user.
@@ -675,7 +675,7 @@ function offlinequiz_check_result_completed($offlinequiz, $group, $result) {
                    AND error = 'doublepage'";
 
         $params = array('offlinequizid' => $offlinequiz->id,
-                'userkey' => $user->{$offlinequizconfig->ID_field},
+                'userkey' => offlinequiz_get_userkey_byuserid($user->id),
                 'groupnumber' => $group->groupnumber);
         $doublepages = $DB->get_records_sql($sql, $params);
         foreach ($doublepages as $page) {

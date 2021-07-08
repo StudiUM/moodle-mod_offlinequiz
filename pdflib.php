@@ -209,10 +209,22 @@ class offlinequiz_answer_pdf extends offlinequiz_pdf {
         $this->Line(109, 29, 109, 50);
         $this->Line(130, 29, 130, 50);
 
-        $this->SetFont($font, 'B', 10);
-        $this->SetXY(137, 27);
-        $this->Cell($offlinequizconfig->ID_digits * 6.5, 7,
-                    offlinequiz_str_html_pdf(get_string('idnumber',  'offlinequiz')), 0, 1, 'C');
+        if(!empty($offlinequizconfig->useridentificationcustom)) {
+            $this->SetFont($font, 'B', 10);
+            $this->SetXY(137, 24);
+            $this->Cell($offlinequizconfig->ID_digits * 6.5, 7,
+                    offlinequiz_str_html_pdf(offlinequiz_get_userkey_fieldname()), 0, 1, 'C');
+            $this->SetXY(137, 28);
+            $this->SetFont($font, '', 7);
+            $this->Cell($offlinequizconfig->ID_digits * 6.5, 7,
+                    offlinequiz_str_html_pdf(get_string('instruction4',  'offlinequiz')), 0, 1, 'C');
+        } else {
+            $this->SetFont($font, 'B', 10);
+            $this->SetXY(137, 27);
+            $this->Cell($offlinequizconfig->ID_digits * 6.5, 7,
+                offlinequiz_str_html_pdf(get_string('idnumber',  'offlinequiz')), 0, 1, 'C');
+        }
+
         $this->SetXY(137, 34);
         $this->Cell($offlinequizconfig->ID_digits * 6.5, 7, '', 1, 1, 'C');  // Box for ID number.
 
@@ -1045,8 +1057,18 @@ function offlinequiz_create_pdf_participants($offlinequiz, $courseid, $list, $co
         $pdf->Cell(3, 3.5, '', 0, 0, 'C');
 
         $pdf->Cell(6, 3.5, '', 0, 0, 'C');
-        $userkey = substr($participant->{$offlinequizconfig->ID_field},
-                          strlen($offlinequizconfig->ID_prefix), $offlinequizconfig->ID_digits);
+
+        offlinequiz_load_useridentification();
+        $offlinequizconfig = get_config('offlinequiz');
+
+
+        if(!empty($offlinequizconfig->useridentificationcustom)) {
+            $userkey = '';
+       } else {
+            $userkey = substr($participant->{$offlinequizconfig->ID_field},
+                strlen($offlinequizconfig->ID_prefix), $offlinequizconfig->ID_digits);
+        }
+
         $pdf->Cell(13, 3.5, $userkey, 0, 0, 'R');
         $pdf->Cell(12, 3.5, '', 0, 0, 'L');
         if ($pdf->GetStringWidth($participant->firstname) > 40) {

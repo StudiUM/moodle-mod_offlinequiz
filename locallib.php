@@ -34,6 +34,7 @@ require_once($CFG->libdir . '/filelib.php');
 require_once($CFG->dirroot . '/question/editlib.php');
 require_once($CFG->dirroot . '/question/format.php');
 require_once($CFG->dirroot . '/question/engine/questionusage.php');
+require_once($CFG->dirroot . '/user/profile/lib.php');
 
 // These are the old error codes from the Moodle 1.9 module. We still need them for migration.
 define("OFFLINEQUIZ_IMPORT_LMS", "1");
@@ -1564,7 +1565,7 @@ function offlinequiz_question_edit_setup($edittab, $baseurl, $requirecmid = fals
     if ($groupnumber === -1 and !empty($SESSION->question_pagevars['groupnumber'])) {
         $groupnumber = $SESSION->question_pagevars['groupnumber'];
     }
-    
+
     if ($groupnumber === -1) {
         $groupnumber = 1;
     }
@@ -1897,18 +1898,33 @@ function offlinequiz_print_partlist($offlinequiz, &$coursecontext, &$systemconte
     list($rsql, $rparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
     $params = array_merge($cparams, $rparams);
 
-    $sql = "SELECT p.id, p.userid, p.listid, u.".$offlinequizconfig->ID_field.", u.firstname, u.lastname,
+    if(!empty($offlinequizconfig->useridentificationcustom)) {
+        $customfieldid = offlinequiz_get_customfieldid();
+        $addtable = ", {user_info_data} uid";
+        $wherecondition = "AND uid.userid = u.id AND uid.fieldid = ".$customfieldid;
+        $userkey = "uid.data";
+        $tabresult = 'data';
+    } else {
+        $userkey = "u." . $offlinequizconfig->ID_field;
+        $addtable = '';
+        $wherecondition = '';
+        $tabresult = $offlinequizconfig->ID_field;
+    }
+
+    $sql = "SELECT p.id, p.userid, p.listid, ".$userkey.", u.firstname, u.lastname,
                    u.alternatename, u.middlename, u.firstnamephonetic, u.lastnamephonetic, u.picture, p.checked
               FROM {offlinequiz_participants} p,
                    {offlinequiz_p_lists} pl,
                    {user} u,
                    {role_assignments} ra
+                   " . $addtable . "
              WHERE p.listid = pl.id
                AND p.userid = u.id
                AND ra.userid=u.id
                AND pl.offlinequizid = :offlinequizid
                AND ra.contextid $csql
-               AND ra.roleid $rsql";
+               AND ra.roleid $rsql
+               " . $wherecondition . "";
 
     $params['offlinequizid'] = $offlinequiz->id;
     if (!empty($listid)) {
@@ -1941,9 +1957,10 @@ function offlinequiz_print_partlist($offlinequiz, &$coursecontext, &$systemconte
     $table = new offlinequiz_partlist_table('mod-offlinequiz-participants', 'participants.php', $tableparams);
 
     // Define table columns.
-    $tablecolumns = array('checkbox', 'picture', 'fullname', $offlinequizconfig->ID_field, 'listnumber', 'attempt', 'checked');
+    $sortcolumnuserkey = (isset($offlinequizconfig->useridentificationcustom)) ? $offlinequizconfig->ID_field : $offlinequizconfig->useridentificationcustom;
+    $tablecolumns = array('checkbox', 'picture', 'fullname', $sortcolumnuserkey, 'listnumber', 'attempt', 'checked');
     $tableheaders = array('<input type="checkbox" name="toggle" class="select-all-checkbox"/>',
-            '', get_string('fullname'), offlinequiz_get_id_field_name(), get_string('participantslist', 'offlinequiz'),
+            '', get_string('fullname'), offlinequiz_get_userkey_fieldname(), get_string('participantslist', 'offlinequiz'),
             get_string('attemptexists', 'offlinequiz'), get_string('present', 'offlinequiz'));
 
     $table->define_columns($tablecolumns);
@@ -1981,6 +1998,7 @@ function offlinequiz_print_partlist($offlinequiz, &$coursecontext, &$systemconte
     }
 
     if ($sort = $table->get_sql_sort()) {
+        $sort = str_replace($offlinequizconfig->useridentificationcustom, $userkey, $sort);
         $sql .= ' ORDER BY ' . $sort;
     } else {
         $sql .= ' ORDER BY u.lastname, u.firstname';
@@ -2023,7 +2041,7 @@ function offlinequiz_print_partlist($offlinequiz, &$coursecontext, &$systemconte
                      . '"  class="select-multiple-checkbox"/>',
                     $picture,
                     $userlink,
-                    $participant->{$offlinequizconfig->ID_field},
+                    $participant->{$tabresult},
                     $lists[$participant->listid]->name,
                     $attempt ? "<img src=\"$CFG->wwwroot/mod/offlinequiz/pix/tick.gif\" alt=\"" .
                     get_string('attemptexists', 'offlinequiz') . "\">"
@@ -2146,25 +2164,40 @@ function offlinequiz_download_partlist($offlinequiz, $fileformat, &$coursecontex
     list($rsql, $rparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
     $params = array_merge($cparams, $rparams);
 
-    $sql = "SELECT p.id, p.userid, p.listid, u." . $offlinequizconfig->ID_field . ", u.firstname, u.lastname,
+    if(!empty($offlinequizconfig->useridentificationcustom)) {
+        $customfieldid = offlinequiz_get_customfieldid();
+        $userkey = "uid.data";
+        $addtable = ", {user_info_data} uid";
+        $wherecondition = "AND uid.userid = u.id AND uid.fieldid = ".$customfieldid;
+        $tabresult = 'data';
+    } else {
+        $userkey = "u." . $offlinequizconfig->ID_field;
+        $addtable = '';
+        $wherecondition = '';
+        $tabresult = $offlinequizconfig->ID_field;
+    }
+
+    $sql = "SELECT p.id, p.userid, p.listid, " . $userkey . ", u.firstname, u.lastname,
                    u.alternatename, u.middlename, u.firstnamephonetic, u.lastnamephonetic,
                    u.picture, p.checked
              FROM {offlinequiz_participants} p,
                   {offlinequiz_p_lists} pl,
                   {user} u,
                   {role_assignments} ra
+                  " . $addtable . "
             WHERE p.listid = pl.id
               AND p.userid = u.id
               AND ra.userid=u.id
               AND pl.offlinequizid = :offlinequizid
               AND ra.contextid $csql
-              AND ra.roleid $rsql";
+              AND ra.roleid $rsql
+              " . $wherecondition . "";
 
     $params['offlinequizid'] = $offlinequiz->id;
 
     // Define table headers.
     $tableheaders = array(get_string('fullname'),
-                          offlinequiz_get_id_field_name(),
+                          offlinequiz_get_userkey_fieldname(),
                           get_string('participantslist', 'offlinequiz'),
                           get_string('attemptexists', 'offlinequiz'),
                           get_string('present', 'offlinequiz'));
@@ -2227,7 +2260,7 @@ function offlinequiz_download_partlist($offlinequiz, $fileformat, &$coursecontex
             }
             $row = array(
                     fullname($participant),
-                    $participant->{$offlinequizconfig->ID_field},
+                    $participant->{$tabresult},
                     $lists[$participant->listid]->name,
                     $attempt ? get_string('yes') : get_string('no'),
                     $participant->checked ? get_string('yes') : get_string('no')
@@ -2581,4 +2614,116 @@ function offlinequiz_remove_questionlist($offlinequiz, $questionids) {
 
         $trans->allow_commit();
     }
+}
+
+/**
+ * Get user informations from userkey scanned in page result.
+ *
+ * @param int $userkey.
+ * @param string $type The type ('array' for an array of objects or 'object' for a single object).
+ * @return array|object An array of users objects by default or an object if specified by $type parameter.
+ */
+function offlinequiz_get_userinfos_byuserkey($userkey, $type = 'array') {
+
+    global $DB;
+
+    offlinequiz_load_useridentification();
+    $offlinequizconfig = get_config('offlinequiz');
+
+    $record = '';
+
+    // Convert userkey in int.
+    $userkeyint = (int)$userkey;
+
+    if(!empty($offlinequizconfig->useridentificationcustom)) {
+        $sql = "SELECT u.*
+        FROM mdl_user u
+        JOIN mdl_user_info_data d ON d.userid = u.id
+        JOIN mdl_user_info_field f ON f.id = d.fieldid
+        WHERE d.data= :userkey AND f.shortname= :configshortname";
+
+        $params = [
+            'userkey' => $userkeyint,
+            'configshortname' => $offlinequizconfig->useridentificationcustom,
+        ];
+
+    } elseif (empty($offlinequizconfig->useridentificationcustom) && isset($offlinequizconfig->ID_field)) {
+        $sql = "SELECT u.*
+        FROM mdl_user u
+        WHERE u.idnumber= :userkey";
+
+        $params = [
+           'userkey' => $userkeyint
+        ];
+
+    }
+
+    if($type == 'object') {
+        $record = $DB->get_record_sql($sql, $params);
+    } else {
+        $record = $DB->get_records_sql($sql, $params);
+    }
+
+    return $record;
+}
+
+/**
+ * Get userkey by user ID.
+ *
+ * @param int $userid.
+ * @return string The userkey.
+ */
+function offlinequiz_get_userkey_byuserid($userid) {
+
+    global $DB;
+
+    offlinequiz_load_useridentification();
+    $offlinequizconfig = get_config('offlinequiz');
+
+    $user = $DB->get_record('user', array('id' => $userid));
+    profile_load_custom_fields($user);
+
+    if(!empty($offlinequizconfig->useridentificationcustom)) {
+        return $user->profile[$offlinequizconfig->useridentificationcustom];
+    } elseif(empty($offlinequizconfig->useridentificationcustom) && isset($offlinequizconfig->ID_field)) {
+        return substr($user->{$offlinequizconfig->ID_field}, strlen($offlinequizconfig->ID_prefix), $offlinequizconfig->ID_digits);
+    }
+}
+
+/**
+ * Get field name.
+ *
+ * @return string field name.
+ */
+function offlinequiz_get_userkey_fieldname() {
+
+    global $DB;
+
+    offlinequiz_load_useridentification();
+    $offlinequizconfig = get_config('offlinequiz');
+
+    if(!empty($offlinequizconfig->useridentificationcustom)) {
+       return $DB->get_field('user_info_field', 'name', array('shortname'=>$offlinequizconfig->useridentificationcustom));
+    } elseif(empty($offlinequizconfig->useridentificationcustom) && isset($offlinequizconfig->ID_field)) {
+        return get_string($offlinequizconfig->ID_field);
+    }
+}
+
+/**
+ * Get custom field id from offline quiz param.
+ *
+ * @return string custom field id.
+ */
+function offlinequiz_get_customfieldid() {
+
+    global $DB;
+
+    offlinequiz_load_useridentification();
+    $offlinequizconfig = get_config('offlinequiz');
+
+    $params = array('shortname' => $offlinequizconfig->useridentificationcustom);
+
+    $customfieldid = $DB->get_field('user_info_field', 'id', $params);
+
+    return $customfieldid;
 }

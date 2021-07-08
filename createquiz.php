@@ -480,6 +480,8 @@ if ($mode == 'preview') {
 
         echo $OUTPUT->notification(get_string('marginwarning', 'offlinequiz'));
         echo '<br/>';
+        echo $OUTPUT->notification(get_string('formatwarning', 'offlinequiz'));
+        echo '<br/>';
 
         foreach ($groups as $group) {
             $groupletter = $letterstr[$group->groupnumber - 1];

@@ -147,7 +147,7 @@ class offlinequiz_overview_report extends offlinequiz_default_report {
                                    AND status = 'error'
                                    AND (error = 'resultexists' OR error = 'differentresultexists')";
                         $params = array('offlinequizid' => $offlinequiz->id,
-                            'userkey' => $user->{$offlinequizconfig->ID_field},
+                            'userkey' => offlinequiz_get_userkey_byuserid($user->id),
                             'groupnumber' => $group->groupnumber
                         );
                         $otherpages = $DB->get_records_sql($sql, $params);
@@ -185,13 +185,15 @@ class offlinequiz_overview_report extends offlinequiz_default_report {
                 ), 'groupnumber', '*', 0, $offlinequiz->numgroups);
 
         // Define table columns.
-        $tablecolumns = array('checkbox', 'picture', 'fullname', $offlinequizconfig->ID_field,
+        $sortcolumnuserkey = (isset($offlinequizconfig->useridentificationcustom)) ? $offlinequizconfig->ID_field : $offlinequizconfig->useridentificationcustom;
+        $tablecolumns = array('checkbox', 'picture', 'fullname', $sortcolumnuserkey,
             'timestart', 'offlinegroupid', 'sumgrades'
         );
 
         $tableheaders = array(
             '<input type="checkbox" class="select-all-checkbox"/>', '',
-            get_string('fullname'), offlinequiz_get_id_field_name(),
+            get_string('fullname'),
+            offlinequiz_get_userkey_fieldname(),
             get_string('importedon', 'offlinequiz'), get_string('group'),
             get_string('grade', 'offlinequiz')
         );
@@ -239,7 +241,7 @@ class offlinequiz_overview_report extends offlinequiz_default_report {
         $table->column_suppress('fullname');
 
         $table->column_class('picture', 'picture');
-        $table->column_class($offlinequizconfig->ID_field, 'userkey');
+        $table->column_class(offlinequiz_get_userkey_fieldname(), 'userkey');
         $table->column_class('timestart', 'timestart');
         $table->column_class('offlinegroupid', 'offlinegroupid');
         $table->column_class('sumgrades', 'sumgrades');
@@ -269,7 +271,7 @@ class offlinequiz_overview_report extends offlinequiz_default_report {
             list($myxls, $formats) = offlinequiz_sheetlib_initialize_headers($workbook);
 
             // Here starts workshhet headers.
-            $headers = array(offlinequiz_get_id_field_name(), get_string('firstname'),
+            $headers = array(offlinequiz_get_userkey_fieldname(), get_string('firstname'),
                 get_string('lastname'), get_string('importedon', 'offlinequiz'),
                 get_string('group'), get_string('grade', 'offlinequiz'), get_string('letter', 'offlinequiz')
             );
@@ -292,7 +294,7 @@ class offlinequiz_overview_report extends offlinequiz_default_report {
             header("Pragma: public");
             echo "\xEF\xBB\xBF"; // UTF-8 BOM.
 
-            $headers = offlinequiz_get_id_field_name() . ", " . get_string('firstname') . ", " . get_string("lastname") .
+            $headers = offlinequiz_get_userkey_fieldname() . ", " . get_string('firstname') . ", " . get_string("lastname") .
                      ", " . get_string('importedon', 'offlinequiz') . ", " . get_string('group') .
                      ", " . get_string('grade', 'offlinequiz') . ", " . get_string('letter', 'offlinequiz');
             if (!empty($withparticipants)) {
@@ -311,7 +313,7 @@ class offlinequiz_overview_report extends offlinequiz_default_report {
 
             // Print the table headers.
             echo get_string('firstname') . ',' . get_string('lastname') . ',' .
-                offlinequiz_get_id_field_name() . ',' . get_string('group');
+                       offlinequiz_get_userkey_fieldname() . ',' . get_string('group');
             $maxquestions = offlinequiz_get_maxquestions($offlinequiz, $groups);
             for ($i = 0; $i < $maxquestions; $i++) {
                 echo ', ' . get_string('question') . ' ' . ($i + 1);
@@ -374,11 +376,22 @@ class offlinequiz_overview_report extends offlinequiz_default_report {
 
         $rolelist = implode(',', $roleids);
 
+        if(!empty($offlinequizconfig->useridentificationcustom)) {
+            $customfieldid = offlinequiz_get_customfieldid();
+            $addjoin = "LEFT JOIN {user_info_data} uid ON uid.userid = u.id AND uid.fieldid = " . $customfieldid;
+            $userkey = "uid.data";
+            $tabresult = 'data';
+        } else {
+            $userkey = "u." . $offlinequizconfig->ID_field;
+            $addjoin = '';
+            $tabresult = $offlinequizconfig->ID_field;
+        }
+
         $select = "SELECT " . $DB->sql_concat('u.id', "'#'", "COALESCE(qa.usageid, 0)") . " AS uniqueid,
         qa.id AS resultid, u.id, qa.usageid, qa.offlinegroupid, qa.status,
         u.id AS userid, u.firstname, u.lastname,
         u.alternatename, u.middlename, u.firstnamephonetic, u.lastnamephonetic,
-        u.picture, u." . $offlinequizconfig->ID_field . ",
+        u.picture, " . $userkey . ",
         qa.sumgrades, qa.timefinish, qa.timestart, qa.timefinish - qa.timestart AS duration ";
 
         $result = $DB->get_in_or_equal($contextids, SQL_PARAMS_NAMED, 'ctx');
@@ -387,6 +400,7 @@ class offlinequiz_overview_report extends offlinequiz_default_report {
 
         $from = " FROM {user} u
                   JOIN {role_assignments} ra ON ra.userid = u.id
+                  " . $addjoin . "
              LEFT JOIN {offlinequiz_results} qa ON u.id = qa.userid AND qa.offlinequizid = :offlinequizid
              ";
 
@@ -406,7 +420,8 @@ class offlinequiz_overview_report extends offlinequiz_default_report {
         } else if ($noresults == 3) {
             // We want all results, also the partial ones.
             $from = "FROM {user} u
-                      JOIN {offlinequiz_results} qa ON u.id = qa.userid ";
+                      JOIN {offlinequiz_results} qa ON u.id = qa.userid 
+                      " . $addjoin;
             $where = " WHERE qa.offlinequizid = :offlinequizid ";
         } // The value noresults = 2 means we want all students, with or without results.
 
@@ -441,7 +456,8 @@ class offlinequiz_overview_report extends offlinequiz_default_report {
         if (empty($tablesort)) {
             $sort = ' ORDER BY u.lastname, u.id ';
         } else {
-            $sort = ' ORDER BY ' . $tablesort . ', u.id';
+           $tablesort = str_replace($offlinequizconfig->useridentificationcustom, $userkey, $tablesort);
+           $sort = ' ORDER BY ' . $tablesort . ', u.id';
         }
 
         // Fetch the results.
@@ -451,7 +467,6 @@ class offlinequiz_overview_report extends offlinequiz_default_report {
         } else {
             $results = $DB->get_records_sql($select . $from . $where . $sort, $params);
         }
-
         // Build table rows.
         if (!$download) {
             $table->initialbars(true);
@@ -489,10 +504,10 @@ class offlinequiz_overview_report extends offlinequiz_default_report {
 
                 if (!$download) {
                     $row = array($checkbox, $picture, $userlink,
-                        $result->{$offlinequizconfig->ID_field}, $resultdate, $groupletter
+                        $result->{$tabresult}, $resultdate, $groupletter
                     );
                 } else {
-                    $row = array($result->{$offlinequizconfig->ID_field}, $result->firstname,
+                    $row = array($result->{$tabresult}, $result->firstname,
                         $result->lastname, $resultdate, $groupletter
                     );
                 }

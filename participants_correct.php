@@ -600,11 +600,29 @@ if ($sheetloaded) {
     }
     // Get userid select items.
     if ($list) {
-        $sql = "SELECT p.id, p.userid, u." . $offlinequizconfig->ID_field . ", u.firstname, u.lastname
-                  FROM {offlinequiz_participants} p
-                  JOIN {user} u ON p.userid = u.id
-                  JOIN {offlinequiz_p_lists} pl ON p.listid = pl.id
-                 WHERE pl.offlinequizid = :offlinequizid
+        if(!empty($offlinequizconfig->useridentificationcustom)) {
+            $customfieldid = offlinequiz_get_customfieldid();
+            $addtable = ", {user_info_data} uid";
+            $wherecondition = "AND uid.userid = u.id AND uid.fieldid = ".$customfieldid;
+            $userkey = "uid.data";
+            $result = 'data';
+        } else {
+            $userkey = "u." . $offlinequizconfig->ID_field;
+            $addtable = '';
+            $wherecondition = '';
+            $result = $offlinequizconfig->ID_field;
+        }
+
+        $sql = "SELECT DISTINCT p.id, p.userid, " . $userkey . ", u.firstname, u.lastname
+                  FROM {user} u,
+                       {offlinequiz_participants} p,
+                       {offlinequiz_p_lists} pl
+                       " . $addtable . "
+                 WHERE p.userid = u.id
+                   AND p.listid = :listid
+                   AND p.listid = pl.id
+                   AND pl.offlinequizid = :offlinequizid
+                   " . $wherecondition . "
               ORDER BY u.lastname, u.firstname";
 
         $params['offlinequizid'] = $offlinequiz->id;
@@ -625,8 +643,7 @@ lass', 'barcodeselect');}; checkinput(false);\">\n>";
                 if (isset($participants[$x]) and $participants[$x]->userid == $user->userid) {
                     echo ' selected="selected"';
                 }
-                echo ">" . substr($user->{$offlinequizconfig->ID_field},
-                                  strlen($offlinequizconfig->ID_prefix), $offlinequizconfig->ID_digits) .
+                echo ">" . $user->{$result} .
                 ', ' . $user->lastname . ' ' . $user->firstname . "</option>\n";
             }
             echo "</select>\n";
