@@ -63,6 +63,13 @@ if ($id) {
 
 require_login($course, false, $cm);
 $context = context_module::instance($cm->id);
+$coursecontext = context_course::instance($course->id);
+
+// Print the message pilot.
+if (has_capability('mod/offlinequiz:viewreports', $context)) {
+    echo $OUTPUT->notification(get_string('messagepilot', 'offlinequiz'));
+}
+
 // Log this request.
 $params = array(
     'objectid' => $cm->id,

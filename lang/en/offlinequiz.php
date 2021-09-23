@@ -373,6 +373,7 @@ $string['matrikel'] = 'student number';
 $string['maxgradewarning'] = 'The maximum grade has to be a number!';
 $string['maxmark'] = 'Maximum mark';
 $string['membersinplist'] = '{$a->count} participants in <a href="{$a->url}">{$a->name}</a>';
+$string['messagepilot'] = 'Warning: to use Offline Quiz, you need to <a href="https://cpu.umontreal.ca/enseignement/enseigner-a-distance/besoin-daide/" target="_blank">contact a member of the Centre de pédagogie universitaire (CPU) who is assigned to your faculty</a>.';
 $string['missingimagefile'] = 'Missing image file';
 $string['missingitemdata'] = 'Missing answer(s) for user {$a}';
 $string['missinglogdata'] = 'Missing logdata for existing result.';
@@ -380,7 +381,9 @@ $string['missingquestion'] = 'This question no longer seems to exist';
 $string['missinguserid'] = 'Missing user identification number! Could not read barcode!';
 $string['modulename_help'] = 'This module allows the teacher to design offline quizzes consisting of multiple choice questions.
 These questions are kept in the Moodle question bank and can be re-used within courses and even between courses.
-The offline quizzes can be downloaded as PDF-, DOCX- or LaTeX-files. The students mark their answers on form sheets. The form sheets are scanned and the answers imported into the system.';
+The offline quizzes can be downloaded as PDF-, DOCX- or LaTeX-files. The students mark their answers on form sheets. The form sheets are scanned, uploaded into the system and the answers evaluated.
+
+Warning: to use Offline Quiz, you need to <a href="https://cpu.umontreal.ca/enseignement/enseigner-a-distance/besoin-daide/" target="_blank">contact a member of the Centre de pédagogie universitaire (CPU) who is assigned to your faculty</a>.';
 $string['moveselectedonpage'] = 'Move selected questions to page: {$a}';
 $string['copyselectedtogroup'] = 'Add selected questions to group: {$a}';
 $string['copytogroup'] = 'Add all questions to group: {$a}';
