@@ -373,7 +373,7 @@ $string['matrikel'] = 'student number';
 $string['maxgradewarning'] = 'The maximum grade has to be a number!';
 $string['maxmark'] = 'Maximum mark';
 $string['membersinplist'] = '{$a->count} participants in <a href="{$a->url}">{$a->name}</a>';
-$string['messagepilot'] = 'Warning: to use Offline Quiz, you need to <a href="https://cpu.umontreal.ca/enseignement/enseigner-a-distance/besoin-daide/" target="_blank">contact a member of the Centre de pédagogie universitaire (CPU) who is assigned to your faculty</a>.';
+$string['messagepilot'] = 'Warning: to use Offline Quiz, contact the person responsible for your faculty scanner and DocUM virtual folders. <a href="https://soutien-studium.refined.site/space/BDCP/1480818689/Test+hors-ligne" target="_blank">More info.</a>';
 $string['missingimagefile'] = 'Missing image file';
 $string['missingitemdata'] = 'Missing answer(s) for user {$a}';
 $string['missinglogdata'] = 'Missing logdata for existing result.';
@@ -383,7 +383,7 @@ $string['modulename_help'] = 'This module allows the teacher to design offline q
 These questions are kept in the Moodle question bank and can be re-used within courses and even between courses.
 The offline quizzes can be downloaded as PDF-, DOCX- or LaTeX-files. The students mark their answers on form sheets. The form sheets are scanned, uploaded into the system and the answers evaluated.
 
-Warning: to use Offline Quiz, you need to <a href="https://cpu.umontreal.ca/enseignement/enseigner-a-distance/besoin-daide/" target="_blank">contact a member of the Centre de pédagogie universitaire (CPU) who is assigned to your faculty</a>.';
+Warning: to use Offline Quiz, contact the person responsible for your faculty scanner and DocUM virtual folders. <a href="https://soutien-studium.refined.site/space/BDCP/1480818689/Test+hors-ligne" target="_blank">More info.</a>';
 $string['moveselectedonpage'] = 'Move selected questions to page: {$a}';
 $string['copyselectedtogroup'] = 'Add selected questions to group: {$a}';
 $string['copytogroup'] = 'Add all questions to group: {$a}';

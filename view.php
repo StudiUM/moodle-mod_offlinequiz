@@ -65,11 +65,6 @@ require_login($course, false, $cm);
 $context = context_module::instance($cm->id);
 $coursecontext = context_course::instance($course->id);
 
-// Print the message pilot.
-if (has_capability('mod/offlinequiz:viewreports', $context)) {
-    echo $OUTPUT->notification(get_string('messagepilot', 'offlinequiz'));
-}
-
 // Log this request.
 $params = array(
     'objectid' => $cm->id,
@@ -337,7 +332,7 @@ if($status['attendancelists']) {
             $hasattlistwithoutstudents = true;
         }
 
-        
+
         $editlistsdata['attendancelists'][] = $listobject;
         $editlists['expandedcontent'] = $OUTPUT->render_from_template('mod_offlinequiz/teacher_view_attendancelists', $editlistsdata);
     }
@@ -443,6 +438,10 @@ $PAGE->set_pagelayout('report');
 
 if (has_capability('mod/offlinequiz:manage', $context)) {
     echo $OUTPUT->header();
+    // Print the message pilot.
+    if (has_capability('mod/offlinequiz:viewreports', $context)) {
+        echo $OUTPUT->notification(get_string('messagepilot', 'offlinequiz'), 'info');
+    }
     // Print the page header.
     if ($edit != -1 and $PAGE->user_allowed_editing()) {
         $USER->editing = $edit;
