@@ -40,11 +40,11 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_configtext_user_formula('offlinequiz/useridentification',
             get_string('useridentification', 'offlinequiz'), get_string('configuseridentification', 'offlinequiz'),
             '[7]=idnumber' , PARAM_RAW, 30));
-   
+
     // Student ID mappping setting.
     $userfields = $DB->get_records('user_info_field');
-    $mappingoptions = array();
-    $mappingoptions[] = get_string('moodleuserid', 'offlinequiz');
+    $mappingoptions = [];
+    $mappingoptions['id'] = get_string('moodleuserid', 'offlinequiz');
 
     if (isset($userfields) && is_array($userfields) && count($userfields) > 0) {
         foreach ($userfields as $userfield) {
