@@ -28,5 +28,8 @@ Feature: Within a moodle instance, a teacher should be able to show an offline q
       | Show an offline quiz tutorial to students. | Yes |
       | Availability | Show on course page |
     And I log out
-    And I am on the "Test offline quiz 'Settings - Tutorial'" "offlinequiz activity" page logged in as student1
+    When I log in as "student1"
+    And I am on "Course 1" course homepage
+    And I follow "Test offline quiz 'Settings - Tutorial'"
+    And I press "Start tutorial about the examination"
     Then I should see "Tutorial for offline quizzes"
