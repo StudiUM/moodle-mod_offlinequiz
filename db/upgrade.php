@@ -817,7 +817,6 @@ function xmldb_offlinequiz_upgrade($oldversion = 0) {
                         }
                     }
                     $newgroups[] = $newgroup;
-
                 }
                 require_once($CFG->dirroot . '/mod/offlinequiz/evallib.php');
                 list($maxquestions, $maxanswers, $formtype, $questionsperpage) =
@@ -962,18 +961,7 @@ function xmldb_offlinequiz_upgrade($oldversion = 0) {
     }
 
     if ($oldversion < 2013012400) {
-
-        // Define field info to be added to offlinequiz_queue.
-        $table = new xmldb_table('offlinequiz_queue');
-        $field = new xmldb_field('info', XMLDB_TYPE_TEXT, 'medium', null, null, null, null, 'status');
-
-        // Conditionally launch add field info.
-        if (!$dbman->field_exists($table, $field)) {
-            $dbman->add_field($table, $field);
-        }
-
-        // Offlinequiz savepoint reached.
-        upgrade_mod_savepoint(true, 2013012400, 'offlinequiz');
+        add_info_to_offlinequiz_queue($dbman, 2013012400);
     }
 
     if ($oldversion < 2013012410) {
@@ -1698,7 +1686,7 @@ function xmldb_offlinequiz_upgrade($oldversion = 0) {
         // Define field pdffont to be added to offlinequiz.
         $table = new xmldb_table('offlinequiz');
         $field = new xmldb_field('pdffont', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'printstudycodefield');
-        
+
         // Conditionally launch add field pdffont.
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
@@ -1707,6 +1695,30 @@ function xmldb_offlinequiz_upgrade($oldversion = 0) {
         // Offlinequiz savepoint reached.
         upgrade_mod_savepoint(true, 2024043002, 'offlinequiz');
     }
+    if ($oldversion < 2024111401) {
+        add_info_to_offlinequiz_queue($dbman, 2024111401);
+    }
 
     return true;
+}
+
+/**
+ * Add the column info to offlinequiz_queue table
+ *
+ * @param database_manager $dbman
+ * @param int $version
+ * @return void
+ */
+function add_info_to_offlinequiz_queue(database_manager $dbman, int $version): void {
+    // Define field info to be added to offlinequiz_queue.
+    $table = new xmldb_table('offlinequiz_queue');
+    $field = new xmldb_field('info', XMLDB_TYPE_TEXT, 'medium', null, null, null, null, 'status');
+
+    // Conditionally launch add field info.
+    if (!$dbman->field_exists($table, $field)) {
+        $dbman->add_field($table, $field);
+    }
+
+    // Offlinequiz savepoint reached.
+    upgrade_mod_savepoint(true, $version, 'offlinequiz');
 }

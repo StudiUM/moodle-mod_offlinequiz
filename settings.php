@@ -168,6 +168,10 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_configtext('offlinequiz/blackwhitethreshold', get_string('blackwhitethreshold', 'offlinequiz'),
             get_string('configblackwhitethreshold', 'offlinequiz'), '75', PARAM_INT));
 
+    $settings->add(new admin_setting_configcheckbox('offlinequiz/oneuploadprocessatatime',
+            get_string('configoneuploadprocessatatime', 'offlinequiz'),
+            get_string('configoneuploadprocessatatimedesc', 'offlinequiz'), 0));
+
     $settings->add(new admin_setting_heading('correctionheading',
             get_string('correctionoptionsheading', 'offlinequiz'), ''));
 
@@ -198,4 +202,5 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_configcheckbox('offlinequiz/experimentalevaluation',
             get_string('configexperimentalevaluation', 'offlinequiz'),
             get_string('configexperimentalevaluationdesc', 'offlinequiz'), 0));
+
 }

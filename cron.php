@@ -27,8 +27,6 @@
  **/
 
 use offlinequiz_result_import\offlinequiz_result_engine;
-use offlinequiz_result_import\offlinequiz_point;
-use offlinequiz_result_import\offlinequiz_result_page;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -57,8 +55,11 @@ function offlinequiz_evaluation_cron($jobid = 0, $verbose = false) {
     $runningjobs = $DB->count_records_sql($runningsql, array('expiretime' => (int) $expiretime));
 
     if ($runningjobs >= OFFLINEQUIZ_MAX_CRON_JOBS) {
-        echo "Too many jobs running! Exiting!";
-        return;
+        $msg = "Too many jobs running! Exiting!";
+        echo $msg;
+        // Throw an exception to mark the task as failed!
+        // Marking this task as warning would be better as a failed, but that option doesn’t exist!
+        throw new moodle_exception($msg);
     }
 
     // TODO do this properly. Just for testing.
@@ -133,9 +134,8 @@ function offlinequiz_evaluation_cron($jobid = 0, $verbose = false) {
             }
             $coursecontext = context_course::instance($course->id);
 
-            offlinequiz_load_useridentification();
-
-            $jobdata = $DB->get_records_sql("
+            $jobdata = $DB->get_records_sql(
+                "
                     SELECT *
                       FROM {offlinequiz_queue_data}
                      WHERE queueid = :queueid
@@ -148,8 +148,6 @@ function offlinequiz_evaluation_cron($jobid = 0, $verbose = false) {
             $dirname = '';
             $doubleentry = 0;
             foreach ($jobdata as $data) {
-                $starttime = time();
-
                 $DB->set_field('offlinequiz_queue_data', 'status', 'processing', array('id' => $data->id));
 
                 // We remember the directory name to be able to remove it later.
@@ -228,18 +226,19 @@ function offlinequiz_evaluation_cron($jobid = 0, $verbose = false) {
                         $resultpage = $engine->scanpage();
                         $engine->save_page(2);
                     }
-
                 } catch (Exception $e) {
                     echo 'job ' . $job->id . ': ' . $e->getMessage() . "\n";
                     $DB->set_field('offlinequiz_queue_data', 'status', 'error', array('id' => $data->id));
                     $DB->set_field('offlinequiz_queue_data', 'error', 'couldnotgrab', array('id' => $data->id));
                     $DB->set_field('offlinequiz_queue_data', 'info', $e->getMessage(), array('id' => $data->id));
-                    $scannedpage->status = 'error';
-                    $scannedpage->error = 'couldnotgrab';
-                    if ($scannedpage->id) {
-                        $DB->update_record('offlinequiz_scanned_pages', $scannedpage);
-                    } else {
-                        $DB->insert_record('offlinequiz_scanned_pages', $scannedpage);
+                    if (isset($scannedpage) && $scannedpage) {
+                        $scannedpage->status = 'error';
+                        $scannedpage->error = 'couldnotgrab';
+                        if (isset($scannedpage->id)) {
+                            $DB->update_record('offlinequiz_scanned_pages', $scannedpage);
+                        } else {
+                            $DB->insert_record('offlinequiz_scanned_pages', $scannedpage);
+                        }
                     }
                 }
             } // End foreach jobdata.
@@ -293,7 +292,6 @@ function offlinequiz_evaluation_cron($jobid = 0, $verbose = false) {
             $pbar->update($numberdone, $numberofjobs,
                         "Processing job - {$numberdone}/{$numberofjobs}.");
         }
-
     } // End foreach.
 
 } // End function.

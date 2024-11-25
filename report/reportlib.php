@@ -230,9 +230,47 @@ function offlinequiz_no_questions_message($offlinequiz, $cm, $context) {
     $output = '';
     $output .= $OUTPUT->notification(get_string('noquestions', 'offlinequiz'));
     if (has_capability('mod/offlinequiz:manage', $context)) {
-        $output .= $OUTPUT->single_button(new moodle_url('/mod/offlinequiz/edit.php',
-        array('cmid' => $cm->id)), get_string('editofflinequiz', 'offlinequiz'), 'get');
+        $output .= $OUTPUT->single_button(new moodle_url(
+            '/mod/offlinequiz/edit.php',
+            ['cmid' => $cm->id]
+        ), get_string('editofflinequiz', 'offlinequiz'), 'get');
     }
 
     return $output;
+}
+
+/**
+ * Check if imagemagick is installed on the system.
+ *
+ * @return bool
+ */
+function offlinequiz_imagemagick_is_installed(): bool {
+    $result = shell_exec("convert -h 2>&1");
+    return !str_contains($result, 'not found');
+}
+
+/**
+ * Check if the pdf config has the read policy.
+ *
+ * @return bool
+ */
+function offlinequiz_imagemagick_check_pdf_config(): bool {
+    $file = shell_exec("cat /etc/ImageMagick*/policy.xml");
+    $lines = explode("\n", $file);
+    $haspdfrights = true;
+    foreach ($lines as $line) {
+        $lowercaseline = strtolower(trim($line));
+        if (!str_starts_with($lowercaseline, '<!--') && str_contains($lowercaseline, 'pdf')) {
+            $policyelement = simplexml_load_string($lowercaseline);
+            if ($policyelement) {
+                $policy = json_decode(json_encode($policyelement));
+                if (isset($policy->{'@attributes'}->rights)) {
+                    $haspdfrights = str_contains($policy->{'@attributes'}->rights, 'read');
+                    break;
+                }
+            }
+            $haspdfrights = false;
+        }
+    }
+    return $haspdfrights;
 }

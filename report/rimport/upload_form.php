@@ -28,21 +28,42 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir.'/formslib.php');
+require_once($CFG->libdir . '/formslib.php');
 
 class offlinequiz_upload_form extends moodleform {
 
+    /**
+     * Moodle form definition
+     *
+     * @return void
+     */
     public function definition() {
+        $filestypesauthorized = ['.jpeg', 'JPEG', 'JPG', 'jpg', '.png', '.zip', '.ZIP', '.tif', '.TIF', '.tiff', '.TIFF'];
+        if (isset($this->_customdata['allowpdf']) && $this->_customdata['allowpdf']) {
+            $filestypesauthorized = [...$filestypesauthorized, ...[".pdf", ".PDF"]];
+        }
+        $this->create_form($filestypesauthorized);
+    }
+
+    /**
+     * Create the form to upload the files
+     *
+     * @param array $acceptedtypes The types accepted for the upload
+     * @return void
+     */
+    private function create_form(array $acceptedtypes): void {
         $mform = $this->_form;
-        // -------------------------------------------------------------------------------
 
         // The file to import.
         $mform->addElement('header', 'importfileupload', get_string('importforms', 'offlinequiz_rimport'));
 
-        $mform->addElement('filepicker', 'newfile', get_string('ziporimagefile', 'offlinequiz_rimport'), null,
-                array('subdirs' => 0, 'accepted_types' =>
-                        array('.jpeg', 'JPEG', 'JPG', 'jpg', '.png', '.zip',
-                              '.ZIP', '.tif', '.TIF', '.tiff', '.TIFF' , ".pdf", ".PDF")));
+        $mform->addElement(
+            'filepicker',
+            'newfile',
+            get_string('ziporimagefile', 'offlinequiz_rimport'),
+            null,
+            ['subdirs' => 0, 'accepted_types' => $acceptedtypes]
+        );
 
         $mform->addRule('newfile', null, 'required', null, 'client');
 

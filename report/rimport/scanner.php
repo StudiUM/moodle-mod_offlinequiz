@@ -60,7 +60,7 @@ class oq_point {
      * @param unknown_type $y
      * @param unknown_type $blank
      */
-    public function __construct($x=0, $y=0, $blank = true) {
+    public function __construct($x = 0, $y = 0, $blank = true) {
         $this->x = round($x);
         $this->y = round($y);
         $this->blank = $blank;
@@ -93,7 +93,6 @@ class oq_point {
         $this->x = round($this->x * $x);
         $this->y = round($this->y * $y);
     }
-
 }
 
 /**
@@ -103,6 +102,15 @@ class oq_point {
  *
  */
 class offlinequiz_page_scanner {
+
+    /** @var string  Gif type*/
+    private const GIF = 'gif';
+    /** @var string  String type*/
+    private const STRING = 'string';
+    /** @var string  Jpeg type*/
+    private const JPEG = 'jpeg';
+    /** @var string  Png type*/
+    private const PNG = 'png';
 
     public $calibrated;
     public $contextid;
@@ -249,7 +257,6 @@ class offlinequiz_page_scanner {
 
         $point = new oq_point(1572, 2639);
         $this->hotspots["page"] = $point;
-
     }
 
     /**
@@ -380,99 +387,51 @@ class offlinequiz_page_scanner {
         $this->zoomy = $imageinfo['1'] / A3_HEIGHT;
         $type = $imageinfo['2'];
 
-        switch ($type) {
-            case IMAGETYPE_GIF:
-                if (function_exists('imagecreatefromgif')) {
-                    $this->image = imagecreatefromgif($file);
-                } else {
-                    $scannedpage->status = 'error';
-                    $scannedpage->error = 'gifnotsupported';
-                    $scannedpage->info = $this->filename;
-                    return $scannedpage;
-                }
-                break;
-            case IMAGETYPE_JPEG:
-                if (function_exists('imagecreatefromjpeg')) {
-                    $this->image = imagecreatefromjpeg($file);
-                } else {
-                    $scannedpage->status = 'error';
-                    $scannedpage->error = 'jpgnotsupported';
-                    $scannedpage->info = $this->filename;
-                    return $scannedpage;
-                }
-                break;
-            case IMAGETYPE_PNG:
-                if (function_exists('imagecreatefrompng')) {
-                    $this->image = imagecreatefrompng($file);
-                } else {
-                    $scannedpage->status = 'error';
-                    $scannedpage->error = 'pngnotsupported';
-                    $scannedpage->info = $this->filename;
-                    return $scannedpage;
-                }
-                break;
-            case IMAGETYPE_TIFF_II:
-                $newfile = $pathparts["dirname"] . '/' . $pathparts["filename"] . ".png";
-                // Converting the tiff file to png format via imagemagick.
-                // This is much faster then using php's imagick extension.
-                $handle = popen("convert '" . $file . "' '" . $newfile . "' ", 'r');
-                fread($handle, 1);
-                while (!feof($handle)) {
-                    fread($handle, 1);
-                }
-                pclose($handle);
-                if (file_exists($newfile)) {
-                    $this->filename = $pathparts["filename"] . ".png";
-                    $scannedpage->origfilename = $this->filename;
-                    $this->sourcefile = $newfile;
-                    if (function_exists('imagecreatefrompng')) {
-                        $this->image = imagecreatefrompng($newfile);
-                    } else {
-                        $scannedpage->status = 'error';
-                        $scannedpage->error = 'pngnotsupported';
-                        $scannedpage->info = $this->filename;
-                        return $scannedpage;
+        try {
+            switch ($type) {
+                case IMAGETYPE_GIF:
+                    $this->set_image_from(self::GIF, $file);
+                    break;
+                case IMAGETYPE_JPEG:
+                    $this->set_image_from(self::JPEG, $file);
+                    break;
+                case IMAGETYPE_PNG:
+                    $this->set_image_from(self::PNG, $file);
+                    break;
+                case IMAGETYPE_TIFF_II:
+                case IMAGETYPE_TIFF_MM:
+                    $newfile = $pathparts["dirname"] . '/' . $pathparts["filename"] . ".png";
+                    // Converting the tiff file to png format via imagemagick.
+                    // This is much faster then using php's imagick extension.
+                    $handle = popen("convert '" . $file . "' '" . $newfile . "' ", 'r');
+                    $lenght = $type === IMAGETYPE_TIFF_II ? 1 : 100;
+                    fread($handle, $lenght);
+                    while (!feof($handle)) {
+                        fread($handle, $lenght);
                     }
-                } else {
-                    $scannedpage->status = 'error';
-                    $scannedpage->error = 'tiffnotsupported';
-                    $scannedpage->info = $this->filename;
-                    return $scannedpage;
-                }
-                break;
-            case IMAGETYPE_TIFF_MM:
-                $newfile = $pathparts["dirname"] . '/' . $pathparts["filename"] . ".png";
-                // Converting the tiff file to png format via imagemagick.
-                $handle = popen("convert '" . $file . "' '" . $newfile . "' ", 'r');
-                fread($handle, 100);
-                while (!feof($handle)) {
-                    fread($handle, 100);
-                }
-                pclose($handle);
-                if (file_exists($newfile)) {
-                    $this->filename = $pathparts["filename"] . ".png";
-                    $scannedpage->origfilename = $this->filename;
-                    $this->sourcefile = $newfile;
-                    if (function_exists('imagecreatefrompng')) {
-                        $this->image = imagecreatefrompng($newfile);
+                    pclose($handle);
+                    if (file_exists($newfile)) {
+                        $this->filename = $pathparts["filename"] . ".png";
+                        $scannedpage->origfilename = $this->filename;
+                        $this->sourcefile = $newfile;
+                        $this->set_image_from(self::PNG, $newfile);
                     } else {
-                        $scannedpage->status = 'error';
-                        $scannedpage->error = 'pngnotsupported';
-                        $scannedpage->info = $this->filename;
-                        return $scannedpage;
+                        throw new moodle_exception('tiffnotsupported');
                     }
-                } else {
-                    $scannedpage->status = 'error';
-                    $scannedpage->error = 'tiffnotsupported';
-                    $scannedpage->info = $this->filename;
-                    return $scannedpage;
-                }
-                break;
-            default:
+                    break;
+                default:
+                    throw new moodle_exception('imagenotsupported');
+            }
+        } catch (moodle_exception $e) {
+            if (str_contains($e->errorcode, 'notsupported')) {
                 $scannedpage->status = 'error';
-                $scannedpage->error = 'imagenotsupported';
-                $scannedpage->info = $this->filename . ' has image type ' . $type;
+                $scannedpage->error = $e->errorcode;
+                $scannedpage->info = $e->errorcode === 'imagenotsupported'
+                    ? $this->filename . ' has image type ' . $type
+                    : $this->filename;
                 return $scannedpage;
+            }
+            throw $e;
         }
 
         $filerecord = array(
@@ -914,7 +873,7 @@ class offlinequiz_page_scanner {
             if ($patternfactor > 2.6) {
                 return 1;
             } else if ($patternfactor2 > 2.8) {
-                 return 1;
+                return 1;
             } else if ($patternfactor < 1.4 or $patternfactor2 < 1.7) {
                 return 2;
             } else {
@@ -995,23 +954,23 @@ class offlinequiz_page_scanner {
         if (imagepng($this->image, $tempsrc)) {
             $handle = popen("convert '" . $tempsrc . "' -rotate 180 '" . $tempdst . "' ", 'r');
             pclose($handle);
-            if ($this->image = imagecreatefrompng($tempdst)) {
-                $this->sourcefile = $tempdst;
+            $this->set_image_from(self::PNG, $tempdst);
+            $this->sourcefile = $tempdst;
 
-                $filerecord = array(
-                        'contextid' => $this->contextid,  // ID of context.
-                        'component' => 'mod_offlinequiz', // Usually = table name.
-                        'filearea'  => 'imagefiles',      // Usually = table name.
-                        'itemid'    => 0,                 // Usually = ID of row in table.
-                        'filepath'  => '/',               // Any path beginning and ending in.
-                        'filename'  => $this->filename . '_rotated'); // Any filename.
+            $filerecord = array(
+                'contextid' => $this->contextid,  // ID of context.
+                'component' => 'mod_offlinequiz', // Usually = table name.
+                'filearea'  => 'imagefiles',      // Usually = table name.
+                'itemid'    => 0,                 // Usually = ID of row in table.
+                'filepath'  => '/',               // Any path beginning and ending in.
+                'filename'  => $this->filename . '_rotated'
+            ); // Any filename.
 
-                $newfile = $this->save_image($filerecord, $this->sourcefile);
+            $newfile = $this->save_image($filerecord, $this->sourcefile);
 
-                unlink($tempdst);
-                unlink($tempsrc);
-                return $newfile;
-            }
+            unlink($tempdst);
+            unlink($tempsrc);
+            return $newfile;
         }
 
         $srcx = imagesx($this->image);
@@ -1261,7 +1220,6 @@ class offlinequiz_page_scanner {
         } else {
             return false;
         }
-
     }
 
     /**
@@ -1760,4 +1718,29 @@ class offlinequiz_page_scanner {
         return $this->insecure;
     }
 
+    /**
+     * Set the image variable using the methods imagecreatefrom...
+     *
+     * @param string $type
+     * @param string $fileordata
+     * @return bool return true if everything goes well
+     */
+    public function set_image_from(string $type, string $fileordata): void {
+        if (!in_array($type, [self::GIF, self::JPEG, self::PNG, self::STRING])) {
+            throw new moodle_exception("Type not supported for the method set image from");
+        }
+        $method = sprintf("imagecreatefrom%s", $type);
+        $this->image = null;
+        if (function_exists($method)) {
+            if ($type === self::STRING || file_exists($fileordata)) {
+                $this->image = $method($fileordata);
+            }
+            if (!$this->image) {
+                $error = sprintf("Something went wrong. Unable to create the image from %s", $type);
+                throw new moodle_exception($error);
+            }
+        } else {
+            throw new moodle_exception("{$type}notsupported");
+        }
+    }
 }
