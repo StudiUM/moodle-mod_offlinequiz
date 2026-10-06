@@ -2012,6 +2012,11 @@ function offlinequiz_apply_filters($text, $filters) {
     foreach ($filters as $filter) {
         $text = $filter->filter($text);
     }
+    $text = preg_replace(
+        '~<span class="MathJax_Preview"><a [^>]*filter/tex/(?:displaytex|texdebug)\.php[^>]*>(<img\b[^>]*>)</a></span>~i',
+        '$1',
+        $text
+    );
     return $text;
 }
 
